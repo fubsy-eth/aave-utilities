@@ -14,7 +14,6 @@ import {
   GasResponse,
   ProtocolAction,
   EthereumTransactionTypeExtended,
-  eEthereumTxType,
 } from './types';
 import { DEFAULT_NULL_VALUE_ON_TX, gasLimitRecommendations } from './utils';
 
@@ -63,11 +62,17 @@ export default class BaseService<T extends Contract> {
         value: value ?? DEFAULT_NULL_VALUE_ON_TX,
       };
 
-      tx.gasLimit = await estimateGasByNetwork(tx, this.provider, gasSurplus);
+      try {
+        tx.gasLimit = await estimateGasByNetwork(tx, this.provider, gasSurplus);
+      } catch (error: unknown) {
+        console.warn('aave utilities - unable to determine gas limit.', error);
+        tx.gasLimit = undefined;
+      }
 
       if (
         action &&
         gasLimitRecommendations[action] &&
+        tx.gasLimit &&
         tx.gasLimit.lte(BigNumber.from(gasLimitRecommendations[action].limit))
       ) {
         tx.gasLimit = BigNumber.from(
@@ -85,29 +90,34 @@ export default class BaseService<T extends Contract> {
       action: string = ProtocolAction.default,
     ): GasResponse =>
     async (force = false) => {
-      const gasPrice = await this.provider.getGasPrice();
+      // tmp
+      (() => {
+        console.log({ txs, txCallback, action, force });
+      })();
+
+      return Promise.resolve(null);
+      // eslint-disable-next-line spaced-comment
+      /*const gasPrice = await this.provider.getGasPrice();
       const hasPendingApprovals = txs.find(
         tx => tx.txType === eEthereumTxType.ERC20_APPROVAL,
       );
       if (!hasPendingApprovals || force) {
-        const { gasLimit, gasPrice: gasPriceProv }: transactionType =
-          await txCallback();
+        const { gasLimit }: transactionType = await txCallback();
         if (!gasLimit) {
           // If we don't recieve the correct gas we throw a error
           throw new Error('Transaction calculation error');
-        }
-
-        return {
+        } */
+      /* return {
           gasLimit: gasLimit.toString(),
           gasPrice: gasPriceProv
             ? gasPriceProv.toString()
             : gasPrice.toString(),
         };
       }
-
+      
       return {
         gasLimit: gasLimitRecommendations[action].recommended,
         gasPrice: gasPrice.toString(),
-      };
+      }; */
     };
 }
